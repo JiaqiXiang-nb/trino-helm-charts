@@ -1,15 +1,23 @@
-FROM trinodb/trino:451
+FROM trinodb/trino:436
 
 USER root
 
-COPY resources/ranger-2.3.0-trino-plugin.tar /root/ranger-2.3.0-trino-plugin.tar
+COPY resources/ranger-3.0.0-SNAPSHOT-trino-plugin.tar /home/trino/ranger-3.0.0-SNAPSHOT-trino-plugin.tar
 
-RUN cd /root && \
-    tar xvf ranger-2.3.0-trino-plugin.tar
+RUN cd /home/trino && \
+    tar xvf ranger-3.0.0-SNAPSHOT-trino-plugin.tar
 
-COPY resources/install.properties /root/ranger-2.3.0-trino-plugin/install.properties
-COPY resources/enable-trino-plugin.sh /root/ranger-2.3.0-trino-plugin/enable-trino-plugin.sh
+COPY resources/install.properties /home/trino/ranger-3.0.0-SNAPSHOT-trino-plugin/install.properties
+COPY resources/enable-trino-plugin.sh /home/trino/ranger-3.0.0-SNAPSHOT-trino-plugin/enable-trino-plugin.sh
 
-RUN cd /root && \
-    chown root:root -R /root/ranger-2.3.0-trino-plugin/* && \
-    /root/ranger-2.3.0-trino-plugin/enable-trino-plugin.sh
+RUN cd /home/trino && \
+    chown root:root -R /home/trino/ranger-3.0.0-SNAPSHOT-trino-plugin/* && \
+    bash /home/trino/ranger-3.0.0-SNAPSHOT-trino-plugin/enable-trino-plugin.sh && \
+    chmod 777 -R /home/trino/ranger-3.0.0-SNAPSHOT-trino-plugin && \
+    chown trino:trino -R /home/trino/ranger-3.0.0-SNAPSHOT-trino-plugin && \
+    chmod 777 -R /usr/lib/trino/plugin/ranger && \
+    chown trino:trino -R /usr/lib/trino/plugin/ranger && \
+    mkdir -p /etc/ranger/hive/policycache && \
+    chmod 777 -R /etc/ranger
+
+USER trino
