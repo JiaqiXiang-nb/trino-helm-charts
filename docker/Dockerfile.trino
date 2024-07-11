@@ -18,6 +18,8 @@ RUN cd /home/trino && \
     chmod 777 -R /usr/lib/trino/plugin/ranger && \
     chown trino:trino -R /usr/lib/trino/plugin/ranger && \
     mkdir -p /etc/ranger/hive/policycache && \
-    chmod 777 -R /etc/ranger
+    chmod 777 -R /etc/ranger && \
+    mkdir -p /var/log/trino/audit/solr/spool && \
+    chmod 777 -R /var/log
 
 USER trino

@@ -1,0 +1,13 @@
+FROM nginx:latest
+
+RUN groupadd -g 1000 trino && \
+    useradd -u 1000 -g 1000 trino && \
+    mkdir -p /var/cache/nginx && chown -R trino:trino /var/cache/nginx && \
+    mkdir -p /var/log/nginx  && chown -R trino:trino /var/log/nginx && \
+    mkdir -p /var/lib/nginx  && chown -R trino:trino /var/lib/nginx && \
+    touch /run/nginx.pid && chown -R trino:trino /run/nginx.pid && \
+    mkdir -p /etc/nginx/templates /etc/nginx/ssl/certs && \
+    chown -R trino:trino /etc/nginx && \
+    chmod -R 777 /etc/nginx/conf.d
+
+USER trino

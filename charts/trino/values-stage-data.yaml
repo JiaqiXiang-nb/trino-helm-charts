@@ -32,6 +32,16 @@ server:
           periodSeconds: 15
         selectPolicy: Max
 
+sidecarContainers:
+  coordinator:
+    - name: coordinator-ranger-proxy
+      image: registry.n.newsbreak.com/trino-nginx-side:436-amd64
+      imagePullPolicy: Always
+      volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+
 securityContext:
   runAsUser: 1000
   runAsGroup: 1000
@@ -95,6 +105,10 @@ resourceGroups:
           "group": "global.nova"
         },
         {
+          "user": "jiaqi.xiang",
+          "group": "global.nova"
+        },
+        {
           "user": "growth",
           "group": "global.growth"
         },
@@ -136,7 +150,6 @@ coordinator:
   additionalConfigFiles:
     access-control.properties: |
       access-control.name=ranger
-      ranger.use_ugi=true
     ranger-security.xml: |
       <ranger>\n<enabled>Mon Jul  8 10:08:29 UTC 2024</enabled>\n</ranger>
     ranger-policymgr-ssl.xml: |
@@ -512,7 +525,7 @@ coordinator:
           </property>
           <property>
               <name>ranger.plugin.trino.policy.rest.url</name>
-              <value>http://172.31.26.72:8998</value>
+              <value>http://127.0.0.1:8998</value>
               <description>
             URL to Ranger Admin
           </description>
@@ -576,21 +589,33 @@ coordinator:
             <pattern>%-5p - %m</pattern>
           </encoder>
         </appender>
+
+        <logger name="org.apache.ranger.authorization.trino.authorizer" level="DEBUG"/>
+        <logger name="org.apache.ranger.plugin.policyengine" level="DEBUG"/>
+
         <root level="INFO">
           <appender-ref ref="console"/>
         </root>
       </configuration>
-    xalogin.xml: |
-      <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-          <property>
-              <name>username</name>
-              <value>admin</value>
-          </property>
-          <property>
-              <name>password</name>
-              <valuex8Bq8ufV2+99MrixGbtIBILOtve7UZO+</value>
-          </property>
-      </configuration>
+    nginx.conf: |
+      worker_processes      auto;
+      error_log             /dev/stdout warn;
+      pid                   /var/cache/nginx/nginx.pid;
+
+      events {
+        worker_connections 1024;
+      }
+      http {
+        server {
+            listen 8998;
+
+            location / {
+                proxy_pass http://ranger-server.k8s.nb-prod.com;
+                proxy_set_header Host ranger-server.k8s.nb-prod.com;
+                proxy_set_header Authorization "Basic YWRtaW46bmJfcmFuZ2VyQDIwMjI=";
+            }
+        }
+      }
 
 
 
