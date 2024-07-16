@@ -31,6 +31,13 @@ server:
           value: 4
           periodSeconds: 15
         selectPolicy: Max
+  config:
+    https:
+      enabled: true
+      port: 8443
+      keystore:
+        path: "/home/trino/mykeystore.jks"
+    authenticationType: "OAUTH2"
 
 sidecarContainers:
   coordinator:
@@ -130,6 +137,10 @@ resourceGroups:
 additionalConfigProperties:
   - query.max-memory=10GB
   - query.max-memory-per-node=1400MB
+  - http-server.authentication.oauth2.issuer=https://keycloak.n.newsbreak.com/auth/realms/master
+  - http-server.authentication.oauth2.client-id=trino
+  - http-server.authentication.oauth2.client-secret=06cd3178-dc7f-487b-89c4-6bdd906b61e8
+  - internal-communication.shared-secret=c3RhZ2UtZGF0YS10ZXN0LXNlY3JldA==
 
 additionalCatalogs:
   hive: |-
@@ -145,6 +156,13 @@ additionalCatalogs:
   hudi: |-
     connector.name=hudi
     hive.metastore.uri=thrift://data.emr.nb.com:9083
+
+additionalExposedPorts:
+  https:
+    servicePort: 8443
+    name: https
+    port: 8443
+    protocol: TCP
 
 coordinator:
   additionalConfigFiles:
@@ -380,7 +398,7 @@ coordinator:
           </property>
           <property>
               <name>xasecure.audit.solr.solr_url</name>
-              <value>http://data.ranger.solr.nb.com:6083/solr/ranger_audits</value>
+              <value>http://solr-stage-test.stage-data.nb-stage.com/solr/ranger_audits</value>
           </property>
           <property>
               <name>xasecure.audit.provider.summary.enabled</name>
@@ -392,7 +410,7 @@ coordinator:
           </property>
           <property>
               <name>xasecure.audit.destination.solr.urls</name>
-              <value>http://data.ranger.solr.nb.com:6083/solr/ranger_audits</value>
+              <value>http://solr-stage-test.stage-data.nb-stage.com/solr/ranger_audits</value>
           </property>
           <property>
               <name>xasecure.audit.destination.solr.user</name>
@@ -511,7 +529,7 @@ coordinator:
       --><configuration>
           <property>
               <name>ranger.plugin.trino.service.name</name>
-              <value>hive</value>
+              <value>trinodev</value>
               <description>
             Name of the Ranger service containing policies for this Trino instance
           </description>
@@ -525,7 +543,7 @@ coordinator:
           </property>
           <property>
               <name>ranger.plugin.trino.policy.rest.url</name>
-              <value>http://127.0.0.1:8998</value>
+              <value>http://ranger-stage-test.stage-data.nb-stage.com</value>
               <description>
             URL to Ranger Admin
           </description>
@@ -589,9 +607,6 @@ coordinator:
             <pattern>%-5p - %m</pattern>
           </encoder>
         </appender>
-
-        <logger name="org.apache.ranger.authorization.trino.authorizer" level="DEBUG"/>
-        <logger name="org.apache.ranger.plugin.policyengine" level="DEBUG"/>
 
         <root level="INFO">
           <appender-ref ref="console"/>

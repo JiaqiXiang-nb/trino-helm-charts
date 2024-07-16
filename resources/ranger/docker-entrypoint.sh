@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # statup script for ranger-admin
-cp /usr/local/share/es/certs/ca/ca.crt /usr/local/share/ca-certificates 
+cp /usr/local/share/es/certs/ca/ca.crt /usr/local/share/ca-certificates
 update-ca-certificates
 cd /root/ranger && ./setup.sh
 ranger-admin start

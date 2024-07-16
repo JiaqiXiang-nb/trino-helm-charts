@@ -1,0 +1,93 @@
+# Default values for ads-api-server.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+nameOverride: ""
+fullnameOverride: "solr-stage-test"
+
+environment:
+  log_level: "DEBUG"
+
+configmap:
+  enabled: false
+
+server:
+  autoscale:
+    enabled: false
+    keda:
+      enabled: false
+
+  podDisruptionBudget:
+    enabled: false
+
+  annotations:
+    prometheus.io/scrape: 'false'
+
+  image:
+    repository: solr
+    tag: latest
+    pullPolicy: Always
+
+  podSecurityContext: {}
+
+  minReadySeconds: 15
+  terminationGracePeriodSeconds: 60
+  deploymentStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+
+  env:
+    - name: SERVER_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+
+  env_extra: []
+
+  resources:
+    limits:
+      cpu: 4000m
+      memory: 8000Mi
+    requests:
+      cpu: 3000m
+      memory: 8000Mi
+
+  ports:
+    - name: http
+      containerPort: 8983
+      protocol: TCP
+
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    failureThreshold: 60
+
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 10
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+  sidecarContainers: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  containerPort: 8983
+
+ingress:
+  enabled: true
+  className: nginx-internal
+  host: solr-stage-test.stage-data.nb-stage.com

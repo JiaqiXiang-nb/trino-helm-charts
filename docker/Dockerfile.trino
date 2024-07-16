@@ -9,6 +9,7 @@ RUN cd /home/trino && \
 
 COPY resources/install.properties /home/trino/ranger-3.0.0-SNAPSHOT-trino-plugin/install.properties
 COPY resources/enable-trino-plugin.sh /home/trino/ranger-3.0.0-SNAPSHOT-trino-plugin/enable-trino-plugin.sh
+COPY resources/mykeystore.jks /home/trino/mykeystore.jks
 
 RUN cd /home/trino && \
     chown root:root -R /home/trino/ranger-3.0.0-SNAPSHOT-trino-plugin/* && \
