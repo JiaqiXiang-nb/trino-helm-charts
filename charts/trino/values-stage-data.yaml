@@ -39,11 +39,13 @@ server:
     internal-communication.shared-secret=test-value
   coordinatorExtraConfig: |-
     internal-communication.shared-secret=test-value
+    web-ui.authentication.type=oauth2
     http-server.process-forwarded=true
     http-server.authentication.allow-insecure-over-http=true
     http-server.authentication.oauth2.issuer=https://keycloak.n.newsbreak.com/auth/realms/master
     http-server.authentication.oauth2.client-id=trino
     http-server.authentication.oauth2.client-secret=06cd3178-dc7f-487b-89c4-6bdd906b61e8
+    http-server.authentication.oauth2.principal-field=preferred_username
 
 sidecarContainers:
   coordinator:
@@ -143,7 +145,6 @@ resourceGroups:
 additionalConfigProperties:
   - query.max-memory=10GB
   - query.max-memory-per-node=1400MB
-  - internal-communication.shared-secret=random-value-999
 additionalLogProperties:
   - io.trino.server.security.oauth2=DEBUG
   - io.trino.server.ui.OAuth2WebUiAuthenticationFilter=DEBUG
