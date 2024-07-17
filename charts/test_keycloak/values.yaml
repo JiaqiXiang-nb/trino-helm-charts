@@ -2,7 +2,7 @@
 # Declare variables to be passed into your templates.
 
 nameOverride: ""
-fullnameOverride: "solr-stage-test"
+fullnameOverride: "keycloak-sandbox-test"
 
 environment:
   log_level: "DEBUG"
@@ -23,8 +23,8 @@ server:
     prometheus.io/scrape: 'false'
 
   image:
-    repository: solr
-    tag: latest
+    repository: quay.io/keycloak/keycloak
+    tag: "9.0.2"
     pullPolicy: Always
 
   podSecurityContext: {}
@@ -42,20 +42,24 @@ server:
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
+    - name: KEYCLOAK_USER
+      value: admin
+    - name: KEYCLOAK_PASSWORD
+      value: admin
 
   env_extra: []
 
   resources:
     limits:
-      cpu: 4000m
-      memory: 8000Mi
+      cpu: 2000m
+      memory: 4000Mi
     requests:
-      cpu: 3000m
-      memory: 8000Mi
+      cpu: 1000m
+      memory: 4000Mi
 
   ports:
     - name: http
-      containerPort: 8983
+      containerPort: 8080
       protocol: TCP
 
   livenessProbe:
@@ -84,9 +88,9 @@ server:
 service:
   type: ClusterIP
   port: 80
-  containerPort: 8983
+  containerPort: 8080
 
 ingress:
   enabled: true
   className: nginx-internal
-  host: solr-stage-test.stage-data.nb-stage.com
+  host: keycloak-sandbox-test.sandbox-dev-first.nb-sandbox.com
