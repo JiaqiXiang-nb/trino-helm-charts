@@ -34,7 +34,7 @@ server:
   config:
     https:
       enabled: false
-    authenticationType: "OAUTH2"
+    authenticationType: "PASSWORD,OAUTH2"
   workerExtraConfig: |-
     internal-communication.shared-secret=test-value
   coordinatorExtraConfig: |-
@@ -141,6 +141,13 @@ resourceGroups:
       ],
       "cpuQuotaPeriod": "1h"
     }
+
+auth:
+  passwordAuth: |
+    hadoop:$2y$10$0HyC0m87brIpSiGDNytEfeYPCpHPrnIWeliicf/tsKP4MxGHZGcQy
+  refreshPeriod: 15s
+  groups: |
+    admin:hadoop
 
 additionalConfigProperties:
   - query.max-memory=10GB

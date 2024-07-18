@@ -6,6 +6,10 @@ configmap:
     secret_key=
     http_host=0.0.0.0
     http_port=8888
+    secure_ssl_redirect=true
+    secure_redirect_host=hue-stage-test.stage-data.nb-stage.com
+    ssl_validate=false
+    secure_proxy_ssl_header=true
     time_zone=Europe/London
     django_debug_mode=true
     http_500_debug_mode=true
@@ -32,6 +36,7 @@ configmap:
     [[database]]
 
     [[session]]
+    trusted_origins=.nb-stage.com
 
     [[smtp]]
 
@@ -59,6 +64,7 @@ configmap:
     login_redirect_url=https://hue-stage-test.stage-data.nb-stage.com/oidc/callback/
     logout_redirect_url=https://keycloak.n.newsbreak.com/auth/realms/master/protocol/openid-connect/logout
     login_redirect_url_failure=https://hue-stage-test.stage-data.nb-stage.com/hue/oidc_failed/
+    oidc_username_attribute=preferred_username
     create_users_on_login=true
 
     [[metrics]]
@@ -83,6 +89,10 @@ configmap:
     [notebook]
 
     [[interpreters]]
+    [[[trino]]]
+    name=Trino
+    interface=sqlalchemy
+    options='{"url": "trino://hadoop:hadoop@trino.stage-data.nb-stage.com:443/hive?SSLVerification=NONE&SSL=true", "connect_args": "{\"protocol\":\"https\",\"session_props\":{\"SSLVerification\":\"NONE\",\"SSL\":\"true\"}}", "has_impersonation": true}'
 
     [dashboard]
 
