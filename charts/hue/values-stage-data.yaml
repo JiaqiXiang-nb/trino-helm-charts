@@ -87,12 +87,13 @@ configmap:
     [[raz]]
 
     [notebook]
+    dbproxy_extra_classpath=/usr/share/hue/classpath/trino-jdbc-436.jar
 
     [[interpreters]]
     [[[trino]]]
     name=Trino
-    interface=sqlalchemy
-    options='{"url": "trino://hadoop:hadoop@trino.stage-data.nb-stage.com:443/hive?SSLVerification=NONE&SSL=true", "connect_args": "{\"protocol\":\"https\",\"session_props\":{\"SSLVerification\":\"NONE\",\"SSL\":\"true\"}}", "has_impersonation": true}'
+    interface=jdbc
+    options='{"url": "jdbc:trino://trino.stage-data.nb-stage.com:443/hive?SSL=true&SSLVerification=NONE", "driver":"io.trino.jdbc.TrinoDriver", "user":"hadoop", "password":"hadoop", "impersonation_property": "sessionUser"}'
 
     [dashboard]
 
@@ -110,7 +111,7 @@ configmap:
 
     [[[default]]]
 
-    submit_to=True
+    submit_to=False
 
     [beeswax]
 

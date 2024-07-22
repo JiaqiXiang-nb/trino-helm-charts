@@ -42,6 +42,8 @@ server:
       valueFrom:
         fieldRef:
           fieldPath: status.podIP
+    - name: JAVA_HOME
+      value: "/usr/lib/jvm/java-17-openjdk-amd64"
 
   env_extra: []
 
