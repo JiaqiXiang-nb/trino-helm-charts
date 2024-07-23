@@ -15,6 +15,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -x
+
 function getInstallProperty() {
     local propertyName=$1
     local propertyValue=""
@@ -218,7 +220,7 @@ elif [ "${HCOMPONENT_NAME}" = "presto" ]; then
     HCOMPONENT_LIB_DIR=${HCOMPONENT_INSTALL_DIR}/plugin/ranger
 	if [ ! -z "${HCOMPONENT_PLUGIN_DIR_NAME}" ]; then
 		HCOMPONENT_LIB_DIR=${HCOMPONENT_PLUGIN_DIR_NAME}
-+   fi
+	fi
     if [ ! -d "${HCOMPONENT_LIB_DIR}" ]; then
         echo "INFO: Creating ${HCOMPONENT_LIB_DIR}"
         mkdir -p ${HCOMPONENT_LIB_DIR}

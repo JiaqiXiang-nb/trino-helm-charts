@@ -1,3 +1,7 @@
 .idea/*
 cert.key
 cert.crt
+resources/ranger-2.3.0-trino-plugin.tar
+resources/ranger-2.3.0-trino-plugin.tar.gz
+resources/busybox.amd64
+resources/busybox.aarch64

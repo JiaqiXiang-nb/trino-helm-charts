@@ -1,0 +1,30 @@
+FROM gethue/hue:20240716-140101
+
+USER root
+ENV TZ=Europe/London
+
+RUN apt clean && apt update && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone && \
+    apt install -y sudo curl wget bc apt-transport-https gnupg ca-certificates zip unzip openjdk-17-jdk gawk
+
+RUN  ./build/env/bin/pip install --no-cache-dir mozilla_django_oidc pyhive==0.7.0 py4j
+
+COPY resources/hue/add_trino_jdbc.sh /usr/share/hue/add_trino_jdbc.sh
+COPY resources/hue/add_trino_jdbc.patch /usr/share/hue/add_trino_jdbc.patch
+COPY resources/hue/jdbc_trino.py /usr/share/hue/desktop/libs/notebook/src/notebook/connectors/jdbc_trino.py
+
+RUN chmod 777 /usr/share/hue/add_trino_jdbc.sh /usr/share/hue/add_trino_jdbc.patch && \
+    chmod 777 -R /usr/share/hue/desktop/libs/notebook/src/notebook/connectors && \
+    bash /usr/share/hue/add_trino_jdbc.sh && \
+    ln -s /usr/lib/jvm/java-17-openjdk-amd64/bin/java /usr/share/hue/build/env/bin/java && \
+    chmod 777 /usr/lib/jvm/java-17-openjdk-amd64/bin/java && \
+    mkdir -p /usr/share/hue/classpath && \
+    cd /usr/share/hue/classpath && \
+    wget -c https://repo1.maven.org/maven2/io/trino/trino-jdbc/436/trino-jdbc-436.jar && \
+    chmod -R 777 /usr/share/hue/classpath
+
+ENV CLASSPATH=/usr/share/hue/classpath
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+
+USER hue

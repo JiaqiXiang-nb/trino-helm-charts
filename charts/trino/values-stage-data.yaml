@@ -2,6 +2,12 @@ nameOverride:
 coordinatorNameOverride:
 workerNameOverride:
 
+image:
+  registry: "registry.n.newsbreak.com"
+  repository: "trino-with-ranger"
+  tag: "436-amd64"
+  pullPolicy: Always
+
 server:
   workers: 1
   autoscaling:
@@ -25,6 +31,35 @@ server:
           value: 4
           periodSeconds: 15
         selectPolicy: Max
+  config:
+    https:
+      enabled: false
+    authenticationType: "PASSWORD,OAUTH2"
+  workerExtraConfig: |-
+    internal-communication.shared-secret=test-value
+  coordinatorExtraConfig: |-
+    internal-communication.shared-secret=test-value
+    web-ui.authentication.type=oauth2
+    http-server.process-forwarded=true
+    http-server.authentication.allow-insecure-over-http=true
+    http-server.authentication.oauth2.issuer=https://keycloak.n.newsbreak.com/auth/realms/master
+    http-server.authentication.oauth2.client-id=trino
+    http-server.authentication.oauth2.client-secret=06cd3178-dc7f-487b-89c4-6bdd906b61e8
+    http-server.authentication.oauth2.principal-field=preferred_username
+
+sidecarContainers:
+  coordinator:
+    - name: coordinator-ranger-proxy
+      image: registry.n.newsbreak.com/trino-nginx-side:436-amd64
+      imagePullPolicy: Always
+      volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
 
 resourceGroups:
   resourceGroupsConfig: |-
@@ -85,6 +120,10 @@ resourceGroups:
           "group": "global.nova"
         },
         {
+          "user": "jiaqi.xiang",
+          "group": "global.nova"
+        },
+        {
           "user": "growth",
           "group": "global.growth"
         },
@@ -103,10 +142,19 @@ resourceGroups:
       "cpuQuotaPeriod": "1h"
     }
 
+auth:
+  passwordAuth: |
+    hadoop:$2y$10$0HyC0m87brIpSiGDNytEfeYPCpHPrnIWeliicf/tsKP4MxGHZGcQy
+  refreshPeriod: 15s
+  groups: |
+    admin:hadoop
+
 additionalConfigProperties:
   - query.max-memory=10GB
   - query.max-memory-per-node=1400MB
-
+additionalLogProperties:
+  - io.trino.server.security.oauth2=DEBUG
+  - io.trino.server.ui.OAuth2WebUiAuthenticationFilter=DEBUG
 additionalCatalogs:
   hive: |-
     connector.name=hive
@@ -118,10 +166,486 @@ additionalCatalogs:
     hive.recursive-directories = true
     hive.parquet.use-column-names=true
     fs.native-s3.enabled=true
-    s3.use-web-identity-token-credentials-provider=true
   hudi: |-
     connector.name=hudi
     hive.metastore.uri=thrift://data.emr.nb.com:9083
+
+additionalExposedPorts:
+  https:
+    servicePort: 8443
+    name: https
+    port: 8443
+    protocol: TCP
+
+coordinator:
+  additionalConfigFiles:
+    access-control.properties: |
+      access-control.name=ranger
+    ranger-security.xml: |
+      <ranger>\n<enabled>Mon Jul  8 10:08:29 UTC 2024</enabled>\n</ranger>
+    ranger-policymgr-ssl.xml: |
+      <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+      <!--
+        Licensed to the Apache Software Foundation (ASF) under one or more
+        contributor license agreements.  See the NOTICE file distributed with
+        this work for additional information regarding copyright ownership.
+        The ASF licenses this file to You under the Apache License, Version 2.0
+        (the "License"); you may not use this file except in compliance with
+        the License.  You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+      --><?xml-stylesheet type="text/xsl" href="configuration.xsl"?><configuration xmlns:xi="http://www.w3.org/2001/XInclude">
+          <!--  The following properties are used for 2-way SSL client server validation -->
+          <property>
+              <name>xasecure.policymgr.clientssl.keystore</name>
+              <value>/etc/hadoop/conf/ranger-plugin-keystore.jks</value>
+              <description>
+                  Java Keystore files
+              </description>
+          </property>
+          <property>
+              <name>xasecure.policymgr.clientssl.truststore</name>
+              <value>/etc/hadoop/conf/ranger-plugin-truststore.jks</value>
+              <description>
+                  java truststore file
+              </description>
+          </property>
+          <property>
+              <name>xasecure.policymgr.clientssl.keystore.credential.file</name>
+              <value>jceks://file/etc/ranger/hive/cred.jceks</value>
+              <description>
+                  java  keystore credential file
+              </description>
+          </property>
+          <property>
+              <name>xasecure.policymgr.clientssl.truststore.credential.file</name>
+              <value>jceks://file/etc/ranger/hive/cred.jceks</value>
+              <description>
+                  java  truststore credential file
+              </description>
+          </property>
+      </configuration>
+    ranger-trino-audit.xml: |
+      <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+      <!--
+        Licensed to the Apache Software Foundation (ASF) under one or more
+        contributor license agreements.  See the NOTICE file distributed with
+        this work for additional information regarding copyright ownership.
+        The ASF licenses this file to You under the Apache License, Version 2.0
+        (the "License"); you may not use this file except in compliance with
+        the License.  You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+      --><?xml-stylesheet type="text/xsl" href="configuration.xsl"?><configuration xmlns:xi="http://www.w3.org/2001/XInclude">
+          <property>
+              <name>xasecure.audit.is.enabled</name>
+              <value>true</value>
+          </property>
+          <!-- HDFS audit provider configuration -->
+          <property>
+              <name>xasecure.audit.hdfs.is.enabled</name>
+              <value>false</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.is.async</name>
+              <value>true</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.async.max.queue.size</name>
+              <value>1048576</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.async.max.flush.interval.ms</name>
+              <value>30000</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.encoding</name>
+              <value/>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.destination.directory</name>
+              <value>hdfs://__REPLACE__NAME_NODE_HOST:8020/ranger/audit/%app-type%/%time:yyyyMMdd%</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.destination.file</name>
+              <value>%hostname%-audit.log</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.destination.flush.interval.seconds</name>
+              <value>900</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.destination.rollover.interval.seconds</name>
+              <value>86400</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.destination.open.retry.interval.seconds</name>
+              <value>60</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.local.buffer.directory</name>
+              <value>__REPLACE__LOG_DIR/trino/audit</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.local.buffer.file</name>
+              <value>%time:yyyyMMdd-HHmm.ss%.log</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.local.buffer.file.buffer.size.bytes</name>
+              <value>8192</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.local.buffer.flush.interval.seconds</name>
+              <value>60</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.local.buffer.rollover.interval.seconds</name>
+              <value>600</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.local.archive.directory</name>
+              <value>__REPLACE__LOG_DIR/trino/audit/archive</value>
+          </property>
+          <property>
+              <name>xasecure.audit.hdfs.config.local.archive.max.file.count</name>
+              <value>10</value>
+          </property>
+          <!-- Audit to HDFS on Azure Datastore (WASB) requires v3 style settings.  Comment the above and uncomment only the
+          following to audit to Azure Blob Datastore via hdfs' WASB schema.
+
+          NOTE: If you specify one audit destination in v3 style then other destinations, if any, must also be specified in v3 style
+          ====
+
+          <property>
+              <name>xasecure.audit.destination.hdfs</name>
+              <value>enabled</value>
+          </property>
+
+          <property>
+              <name>xasecure.audit.destination.hdfs.dir</name>
+              <value>wasb://ranger-audit1@youraccount.blob.core.windows.net</value>
+          </property>
+
+          the following 3 correspond to the properties with similar name in core-site.xml, i.e.
+          - fs.azure.account.key.youraccount.blob.core.windows.net => xasecure.audit.destination.hdfs.config.fs.azure.account.key.youraccount.blob.core.windows.net and
+          - fs.azure.account.keyprovider.youraccount.blob.core.windows.net => xasecure.audit.destination.hdfs.config.fs.azure.account.keyprovider.youraccount.blob.core.windows.net,
+          - fs.azure.shellkeyprovider.script => xasecure.audit.destination.hdfs.config.fs.azure.shellkeyprovider.script,
+
+          <property>
+              <name>xasecure.audit.destination.hdfs.config.fs.azure.account.key.youraccount.blob.core.windows.net</name>
+              <value>YOUR ENCRYPTED ACCESS KEY</value>
+          </property>
+
+          <property>
+              <name>xasecure.audit.destination.hdfs.config.fs.azure.account.keyprovider.youraccount.blob.core.windows.net</name>
+              <value>org.apache.hadoop.fs.azure.ShellDecryptionKeyProvider</value>
+          </property>
+
+          <property>
+              <name>xasecure.audit.destination.hdfs.config.fs.azure.shellkeyprovider.script</name>
+              <value>/usr/lib/python2.7/dist-packages/hdinsight_common/decrypt.sh</value>
+          </property>
+          -->
+          <!-- Log4j audit provider configuration -->
+          <property>
+              <name>xasecure.audit.log4j.is.enabled</name>
+              <value>false</value>
+          </property>
+          <property>
+              <name>xasecure.audit.log4j.is.async</name>
+              <value>false</value>
+          </property>
+          <property>
+              <name>xasecure.audit.log4j.async.max.queue.size</name>
+              <value>10240</value>
+          </property>
+          <property>
+              <name>xasecure.audit.log4j.async.max.flush.interval.ms</name>
+              <value>30000</value>
+          </property>
+          <!-- trino audit provider configuration -->
+          <property>
+              <name>xasecure.audit.trino.is.enabled</name>
+              <value>false</value>
+          </property>
+          <property>
+              <name>xasecure.audit.trino.async.max.queue.size</name>
+              <value>1</value>
+          </property>
+          <property>
+              <name>xasecure.audit.trino.async.max.flush.interval.ms</name>
+              <value>1000</value>
+          </property>
+          <property>
+              <name>xasecure.audit.trino.broker_list</name>
+              <value>localhost:9092</value>
+          </property>
+          <property>
+              <name>xasecure.audit.trino.topic_name</name>
+              <value>ranger_audits</value>
+          </property>
+          <!-- Ranger audit provider configuration -->
+          <property>
+              <name>xasecure.audit.solr.is.enabled</name>
+              <value>true</value>
+          </property>
+          <property>
+              <name>xasecure.audit.solr.async.max.queue.size</name>
+              <value>1</value>
+          </property>
+          <property>
+              <name>xasecure.audit.solr.async.max.flush.interval.ms</name>
+              <value>1000</value>
+          </property>
+          <property>
+              <name>xasecure.audit.solr.solr_url</name>
+              <value>http://solr-stage-test.stage-data.nb-stage.com/solr/ranger_audits</value>
+          </property>
+          <property>
+              <name>xasecure.audit.provider.summary.enabled</name>
+              <value>true</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.solr</name>
+              <value>true</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.solr.urls</name>
+              <value>http://solr-stage-test.stage-data.nb-stage.com/solr/ranger_audits</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.solr.user</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.solr.password</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.solr.zookeepers</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.solr.batch.filespool.dir</name>
+              <value>/var/log/trino/audit/solr/spool</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.elasticsearch</name>
+              <value>false</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.elasticsearch.urls</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.elasticsearch.user</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.elasticsearch.password</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.elasticsearch.index</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.elasticsearch.port</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.elasticsearch.protocol</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.amazon_cloudwatch</name>
+              <value>false</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.amazon_cloudwatch.log_group</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.amazon_cloudwatch.log_stream_prefix</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.amazon_cloudwatch.batch.filespool.dir</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.amazon_cloudwatch.region</name>
+              <value>NONE</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.hdfs</name>
+              <value>false</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.hdfs.batch.filespool.dir</name>
+              <value>/var/log/trino/audit/hdfs/spool</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.hdfs.dir</name>
+              <value>hdfs://__REPLACE__NAME_NODE_HOST:8020/ranger/audit</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.hdfs.config.fs.azure.shellkeyprovider.script</name>
+              <value>__REPLACE_AZURE_SHELL_KEY_PROVIDER</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.hdfs.config.fs.azure.account.key.__REPLACE_AZURE_ACCOUNT_NAME.blob.core.windows.net</name>
+              <value>__REPLACE_AZURE_ACCOUNT_KEY</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.hdfs.config.fs.azure.account.keyprovider.__REPLACE_AZURE_ACCOUNT_NAME.blob.core.windows.net</name>
+              <value>__REPLACE_AZURE_ACCOUNT_KEY_PROVIDER</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.log4j</name>
+              <value>true</value>
+          </property>
+          <property>
+              <name>xasecure.audit.destination.log4j.logger</name>
+              <value>xaaudit</value>
+          </property>
+      </configuration>
+    ranger-trino-security.xml: |
+      <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+      <?xml-stylesheet type="text/xsl" href="configuration.xsl"?><!--
+        Licensed to the Apache Software Foundation (ASF) under one or more
+        contributor license agreements.  See the NOTICE file distributed with
+        this work for additional information regarding copyright ownership.
+        The ASF licenses this file to You under the Apache License, Version 2.0
+        (the "License"); you may not use this file except in compliance with
+        the License.  You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+      --><configuration>
+          <property>
+              <name>ranger.plugin.trino.service.name</name>
+              <value>trinodev</value>
+              <description>
+            Name of the Ranger service containing policies for this Trino instance
+          </description>
+          </property>
+          <property>
+              <name>ranger.plugin.trino.policy.source.impl</name>
+              <value>org.apache.ranger.admin.client.RangerAdminRESTClient</value>
+              <description>
+            Class to retrieve policies from the source
+          </description>
+          </property>
+          <property>
+              <name>ranger.plugin.trino.policy.rest.url</name>
+              <value>http://ranger-stage-test.stage-data.nb-stage.com</value>
+              <description>
+            URL to Ranger Admin
+          </description>
+          </property>
+          <property>
+              <name>ranger.plugin.trino.policy.rest.ssl.config.file</name>
+              <value>/etc/trino/etc/ranger-policymgr-ssl.xml</value>
+              <description>
+            Path to the file containing SSL details to contact Ranger Admin
+          </description>
+          </property>
+          <property>
+              <name>ranger.plugin.trino.policy.pollIntervalMs</name>
+              <value>30000</value>
+              <description>
+            How often to poll for changes in policies?
+          </description>
+          </property>
+          <property>
+              <name>ranger.plugin.trino.policy.rest.client.connection.timeoutMs</name>
+              <value>120000</value>
+              <description>
+            S3 Plugin RangerRestClient Connection Timeout in Milli Seconds
+          </description>
+          </property>
+          <property>
+              <name>ranger.plugin.trino.policy.rest.client.read.timeoutMs</name>
+              <value>30000</value>
+              <description>
+            S3 Plugin RangerRestClient read Timeout in Milli Seconds
+          </description>
+          </property>
+          <property>
+              <name>ranger.plugin.trino.policy.cache.dir</name>
+              <value>/etc/ranger/hive/policycache</value>
+          </property>
+      </configuration>
+    trino-ranger-plugin-logback.xml: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!--
+        Licensed to the Apache Software Foundation (ASF) under one or more
+        contributor license agreements.  See the NOTICE file distributed with
+        this work for additional information regarding copyright ownership.
+        The ASF licenses this file to You under the Apache License, Version 2.0
+        (the "License"); you may not use this file except in compliance with
+        the License.  You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+      -->
+
+      <configuration scan="true" scanPeriod="30 seconds">
+        <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+          <Target>System.out</Target>
+          <encoder>
+            <pattern>%-5p - %m</pattern>
+          </encoder>
+        </appender>
+
+        <root level="INFO">
+          <appender-ref ref="console"/>
+        </root>
+      </configuration>
+    nginx.conf: |
+      worker_processes      auto;
+      error_log             /dev/stdout warn;
+      pid                   /var/cache/nginx/nginx.pid;
+
+      events {
+        worker_connections 1024;
+      }
+      http {
+        server {
+            listen 8998;
+
+            location / {
+                proxy_pass http://ranger-server.k8s.nb-prod.com;
+                proxy_set_header Host ranger-server.k8s.nb-prod.com;
+                proxy_set_header Authorization "Basic YWRtaW46bmJfcmFuZ2VyQDIwMjI=";
+            }
+        }
+      }
+
+
 
 ingress:
   enabled: true

@@ -1,0 +1,222 @@
+configmap:
+  enabled: true
+  key: hue.ini
+  value: |
+    [desktop]
+    secret_key=
+    http_host=0.0.0.0
+    http_port=8888
+    secure_ssl_redirect=true
+    secure_redirect_host=hue-stage-test.stage-data.nb-stage.com
+    ssl_validate=false
+    secure_proxy_ssl_header=true
+    time_zone=Europe/London
+    django_debug_mode=true
+    http_500_debug_mode=true
+    [[django_admins]]
+
+    [[custom]]
+
+    [[auth]]
+    backend=desktop.auth.backend.OIDCBackend
+    idle_session_timeout=-1
+
+    [[[jwt]]]
+
+    [[ldap]]
+
+    [[[users]]]
+
+    [[[groups]]]
+
+    [[[ldap_servers]]]
+
+    [[vcs]]
+
+    [[database]]
+
+    [[session]]
+    trusted_origins=.nb-stage.com
+
+    [[smtp]]
+
+    host=localhost
+    port=25
+    user=
+    password=
+
+    tls=no
+
+    [[knox]]
+
+    [[kerberos]]
+
+    [[oauth]]
+
+    [[oidc]]
+    oidc_rp_client_id=trino
+    oidc_rp_client_secret=06cd3178-dc7f-487b-89c4-6bdd906b61e8
+    oidc_op_authorization_endpoint=https://keycloak.n.newsbreak.com/auth/realms/master/protocol/openid-connect/auth
+    oidc_op_token_endpoint=https://keycloak.n.newsbreak.com/auth/realms/master/protocol/openid-connect/token
+    oidc_op_user_endpoint=https://keycloak.n.newsbreak.com/auth/realms/master/protocol/openid-connect/userinfo
+    oidc_op_jwks_endpoint=https://keycloak.n.newsbreak.com/auth/realms/master/protocol/openid-connect/certs
+    oidc_verify_ssl=false
+    login_redirect_url=https://hue-stage-test.stage-data.nb-stage.com/oidc/callback/
+    logout_redirect_url=https://keycloak.n.newsbreak.com/auth/realms/master/protocol/openid-connect/logout
+    login_redirect_url_failure=https://hue-stage-test.stage-data.nb-stage.com/hue/oidc_failed/
+    oidc_username_attribute=preferred_username
+    create_users_on_login=true
+
+    [[metrics]]
+
+    [[slack]]
+
+    [[tracing]]
+
+    [[task_server]]
+
+    [[task_server_v2]]
+
+    [[gc_accounts]]
+    [[[default]]]
+
+    [[ozone]]
+
+    [[[default]]]
+
+    [[raz]]
+
+    [notebook]
+    dbproxy_extra_classpath=/usr/share/hue/classpath/trino-jdbc-436.jar
+
+    [[interpreters]]
+    [[[trino]]]
+    name=Trino
+    interface=jdbc
+    options='{"url": "jdbc:trino://trino.stage-data.nb-stage.com:443/hive?SSL=true&SSLVerification=NONE", "driver":"io.trino.jdbc.TrinoDriver", "user":"hadoop", "password":"hadoop", "impersonation_property": "sessionUser"}'
+
+    [dashboard]
+
+    [[engines]]
+
+    [hadoop]
+
+    [[hdfs_clusters]]
+
+    [[[default]]]
+
+    fs_defaultfs=hdfs://localhost:8020
+
+    [[yarn_clusters]]
+
+    [[[default]]]
+
+    submit_to=False
+
+    [beeswax]
+
+    [[ssl]]
+
+    [metastore]
+
+    [impala]
+
+    [[ssl]]
+
+    [spark]
+
+    [oozie]
+
+    [filebrowser]
+
+    [pig]
+
+    [sqoop]
+
+    [proxy]
+
+    [hbase]
+
+    [search]
+
+    [libsolr]
+
+    [indexer]
+
+    [jobsub]
+
+    [jobbrowser]
+
+    [[query_store]]
+
+    [security]
+
+    [zookeeper]
+
+    [[clusters]]
+
+    [[[default]]]
+
+    [useradmin]
+
+    [[password_policy]]
+
+    [liboozie]
+
+    [aws]
+
+    [[aws_accounts]]
+
+    [azure]
+    [[azure_accounts]]
+
+    [[[default]]]
+
+    [[adls_clusters]]
+
+    [[[default]]]
+
+    [[abfs_clusters]]
+
+    [[[default]]]
+
+    [libsentry]
+
+    [libzookeeper]
+
+    [librdbms]
+
+    [[databases]]
+
+    [libsaml]
+
+    [liboauth]
+
+    [kafka]
+
+    [[kafka]]
+
+    [metadata]
+
+    [[manager]]
+
+    [[optimizer]]
+
+    [[catalog]]
+
+    [[navigator]]
+
+    [[prometheus]]
+
+
+
+server:
+  volumeMounts:
+    - name: configmap
+      mountPath: /usr/share/hue/desktop/conf/z-hue.ini
+      subPath: hue.ini
+
+ingress:
+  enabled: true
+  className: nginx-internal
+  host: hue-stage-test.stage-data.nb-stage.com
